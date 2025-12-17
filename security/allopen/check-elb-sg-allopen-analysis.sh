@@ -1,6 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 
+# AWS_PROFILE → 기본 REGION 자동 지정
+CURRENT_PROFILE="${AWS_PROFILE:-default}"
+
+if [ "$CURRENT_PROFILE" = "dotdotdot" ]; then
+  REGION="us-west-2"   # 오레곤
+else
+  REGION="ap-northeast-2"  # 서울
+fi
+
+# CLI 인자 우선 적용
+REGION="${1:-$REGION}"
+
+echo "🔧 AWS_PROFILE=$CURRENT_PROFILE → REGION=$REGION"
+
 echo "=========================================================="
 echo " 🔐 Risk Classification Policy (Report 기준)"
 echo "=========================================================="
@@ -25,6 +39,7 @@ echo " 🔍 Step 1) ELBv2 Load Balancer 목록 조회 (ALB/NLB/GWLB 포함)"
 echo "=========================================================="
 
 LBS=$(aws elbv2 describe-load-balancers \
+  --region "$REGION" \
   --query "LoadBalancers[].LoadBalancerArn" \
   --output text)
 
@@ -88,6 +103,7 @@ for LB_ARN in $LBS; do
   echo "=========================================================="
 
   LISTENER_PORTS="$(aws elbv2 describe-listeners \
+    --region "$REGION" \
     --load-balancer-arn "$LB_ARN" \
     --query "Listeners[].Port" \
     --output text 2>/dev/null || true)"
@@ -112,7 +128,7 @@ for LB_ARN in $LBS; do
   for SG in $SG_IDS; do
     [[ "$SG" == "None" || -z "${SG// }" ]] && continue
 
-    SG_JSON=$(aws ec2 describe-security-groups --group-ids "$SG" --output json)
+    SG_JSON=$(aws ec2 describe-security-groups --region "$REGION" --group-ids "$SG" --output json)
     SG_NAME=$(echo "$SG_JSON" | jq -r '.SecurityGroups[0].GroupName // "(unknown)"')
     INBOUND_RULES=$(echo "$SG_JSON" | jq -c '.SecurityGroups[0].IpPermissions // []')
 

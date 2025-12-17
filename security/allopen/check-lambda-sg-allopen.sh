@@ -1,7 +1,20 @@
 #!/bin/bash
 
 # 사용법: ./check-lambda-sg-allopen.sh ap-northeast-2
-REGION="${1:-ap-northeast-2}"
+
+# AWS_PROFILE → 기본 REGION 자동 지정
+CURRENT_PROFILE="${AWS_PROFILE:-default}"
+
+if [ "$CURRENT_PROFILE" = "dotdotdot" ]; then
+  REGION="us-west-2"   # 오레곤
+else
+  REGION="ap-northeast-2"  # 서울
+fi
+
+# CLI 인자 우선 적용
+REGION="${1:-$REGION}"
+
+echo "🔧 AWS_PROFILE=$CURRENT_PROFILE → REGION=$REGION"
 
 echo "=========================================================="
 echo " 🔍 Lambda (VPC Attached) → SG all open 점검"
